@@ -601,17 +601,13 @@ Receiving supports partial receipts.
 
 ### BR-REC-004
 
-Accepted good quantity increases:
-
-- Physical Stock;
-- Sellable Stock;
-- Available Stock.
+Receiving sellable stock increases Physical Stock and Sellable Stock (recorded as `sellable_quantity`). Available Stock is derived from `sellable_quantity - reserved_quantity` (it is not directly incremented).
 
 Reserved Stock is unchanged by normal purchase receiving.
 
 ### BR-REC-005
 
-Damaged received quantity does not increase Available Stock.
+Damaged received quantity increases non-sellable Damaged Stock (`damaged_quantity`); it does not increase `sellable_quantity` or derived Available Stock.
 
 ### BR-REC-006
 

@@ -641,7 +641,7 @@ available_quantity =
     sellable_quantity - reserved_quantity
 ```
 
-`available_quantity` should be derived rather than independently stored.
+`available_quantity` must be derived from `sellable_quantity - reserved_quantity` and must not be stored or independently maintained as a mutable database quantity.
 
 ### Constraints
 

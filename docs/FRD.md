@@ -1827,14 +1827,15 @@ AI-created POs follow exactly the same approval path.
 Accepted good quantity:
 
 - increases Physical Stock;
-- increases Sellable Stock;
-- increases Available Stock;
+- increases Sellable Stock (recorded as `sellable_quantity`);
 - does not change Reserved Stock.
+
+Available Stock is derived from `sellable_quantity` minus `reserved_quantity` (it is not directly incremented).
 
 Damaged receipt:
 
-- increases the appropriate non-sellable classification;
-- does not increase Available Stock.
+- increases the appropriate non-sellable classification (`damaged_quantity`);
+- does not increase `sellable_quantity` or derived Available Stock.
 
 ---
 

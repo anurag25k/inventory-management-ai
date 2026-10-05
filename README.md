@@ -96,13 +96,13 @@ AI-powered inventory intelligence and controlled agentic workflows.
 
 The project is organized into:
 
-- `apps/web` — Next.js frontend
+- `backend/` — Django backend
 
-- `apps/api` — Django backend
+- `frontend/` — Next.js frontend
 
-- `docs` — Product and technical documentation
+- `infrastructure/` — Infrastructure configuration
 
-- `infra` — Infrastructure configuration
+- `docs/` — Product and technical documentation
 
 ## Development
 

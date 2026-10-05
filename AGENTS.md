@@ -256,19 +256,19 @@ Do not silently make major product decisions.
 
 # 6. Repository Structure
 
-Prefer a structure similar to:
+The authoritative structure is:
 
-apps/
-
-    web/
-
-    api/
-
-docs/
-
-infra/
-
-tests/
+```text
+inventory-management-ai/
+├── backend/
+├── frontend/
+├── infrastructure/
+├── docs/
+├── AGENTS.md
+├── README.md
+├── .gitignore
+└── docker-compose.yml
+```
 
 The frontend should remain separated from the backend.
 

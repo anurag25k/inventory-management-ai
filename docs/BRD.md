@@ -1422,8 +1422,8 @@ Each workflow is described as business process only.
 - **Objective:** Increase on-hand for accepted good quantity.
 - **Trigger:** Confirmed receipt of good stock.
 - **Actors:** Same as receiving (system of record updates as part of the business receipt).
-- **Steps:** Accepted quantity becomes purchase movement at the warehouse; available stock increases accordingly (reserved unchanged).
-- **Outcome:** Stock on hand and available stock reflect the receipt.
+- **Steps:** Accepted quantity becomes purchase movement at the warehouse; receiving sellable stock increases sellable_quantity, while available stock is derived from sellable_quantity minus reserved_quantity (reserved unchanged).
+- **Outcome:** Stock on hand, sellable stock, and derived available stock reflect the receipt.
 - **Exceptions:** Attempt to add damaged goods as sellable; concurrent adjustment at same SKU/warehouse.
 
 ### WF-010 Sales order creation
