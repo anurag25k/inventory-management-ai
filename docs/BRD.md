@@ -6,6 +6,8 @@
 **Status:** Draft for review  
 **Audience:** Business owners, product stakeholders, and later design teams  
 
+**Documentation revision:** 2026-10-04 — confirmed decisions synchronized; stale terminology and decision summaries corrected.  
+
 This document describes **what** the business needs and **why**. It does not prescribe technologies, data models, APIs, or implementation design.
 
 Related document: [REQUIREMENT-DECISIONS.md](./REQUIREMENT-DECISIONS.md)
@@ -51,7 +53,7 @@ Stable identifiers used in this document:
 | RSK- | Risks |
 | DEP- | Dependencies |
 | FUT- | Future scope |
-| DEC- | Open business decisions |
+| DEC- | Business decisions (open or confirmed) |
 
 All IDs in this document are unique.
 
@@ -77,7 +79,7 @@ Many SMBs still run inventory on spreadsheets, disconnected tools, or informal k
 
 The product gives one controlled place to:
 
-- Know stock on hand, reserved stock, and available stock by product and warehouse.
+- Know physical, sellable, reserved, available, damaged, and expired stock by product and warehouse.
 - Buy, receive, sell, transfer, adjust, and return goods with a traceable history.
 - Assign people clear roles instead of shared, unrestricted access.
 - See operational reports and alerts in time to act.
@@ -101,7 +103,7 @@ BR-005. Human approval is required for high-impact AI actions. AI output must di
 
 SMB inventory operations commonly fail in the following ways.
 
-BR-010. **Poor inventory visibility.** Owners and staff cannot quickly see what is in each warehouse, what is reserved, and what can still be sold.
+BR-010. **Poor inventory visibility.** Owners and staff cannot quickly see physical, sellable, reserved, and available stock in each warehouse, including damaged and expired goods.
 
 BR-011. **Manual stock tracking.** Spreadsheets, notebooks, and memory are used as the stock record. They go stale as soon as two people act at once.
 
@@ -133,7 +135,7 @@ BR-022. **Disconnected processes.** Purchasing, receiving, sales, and stock adju
 
 A controlled inventory system can improve the business in the following ways.
 
-BR-030. **Inventory accuracy.** Stock on hand, reserved stock, and available stock become consistent with receiving, sales, transfers, returns, and adjustments.
+BR-030. **Inventory accuracy.** Physical, sellable, reserved, and available stock become consistent with receiving, sales, transfers, returns, and adjustments, with damaged and expired quantities kept out of available-to-promise stock.
 
 BR-031. **Operational efficiency.** Staff spend less time reconciling spreadsheets and more time receiving, picking, selling, and investigating exceptions.
 
@@ -254,7 +256,7 @@ Typical sectors include wholesale, distribution, retail back-office, spare parts
 - **Goals:** Traceable stock, timely transfers, few unexplained variances.
 - **Pain points:** Silent quantity edits; receiving that never matches POs; dead stock nobody owns.
 - **Typical tasks:** Review movements, approve or perform adjustments, plan transfers, investigate anomalies.
-- **Information needs:** On-hand / reserved / available, movements, aging, dead stock, adjustment reasons.
+- **Information needs:** Physical / sellable / reserved / available / damaged / expired, movements, aging, dead stock, adjustment reasons.
 
 ### 9.4 Luis — Warehouse / inventory staff
 
@@ -301,9 +303,9 @@ The initial product includes the following business capabilities.
 | BR-072 | Product catalog: products, SKUs, categories, brands, units, status, and supporting metadata. |
 | BR-073 | Product images or documents where they help identify goods. |
 | BR-074 | Multiple warehouses and warehouse-specific inventory. |
-| BR-075 | Inventory quantities: stock on hand, reserved, available; opening stock; movements; adjustments; damage; expiry; transfers; history. |
+| BR-075 | Inventory quantities: physical, sellable, reserved, available, damaged, and expired stock; opening stock; movements; adjustments; transfers; history. |
 | BR-076 | Low-stock and reorder thresholds; stock aging and dead-stock views. |
-| BR-077 | Inventory valuation as a management view, using a confirmed method (see DEC-006). |
+| BR-077 | Inventory valuation as a management view using Weighted Average Cost (DEC-006). |
 | BR-078 | Supplier profiles, contacts, product/price information, performance, and history. |
 | BR-079 | Purchase orders, approval, partial and full receiving, purchase history, and purchase returns. |
 | BR-080 | Customer profiles, contacts, and sales-related history. |
@@ -352,9 +354,9 @@ ORG-001. The product must support many independent organizations (tenants) on th
 
 ORG-002. Each organization’s operational data is private to that organization. No organization may read, change, delete, or infer another organization’s sensitive operational information.
 
-ORG-003. An organization can be created through onboarding (see DEC-032) and can maintain a business profile (name, status, contact details, and similar non-technical settings).
+ORG-003. Qualified users may create an organization through initial onboarding and become its initial ADMIN. SUPER_ADMIN platform administration may also create organizations. There is no complex organization approval workflow in the initial product (DEC-032). An organization maintains a business profile (name, status, contact details, and similar non-technical settings).
 
-ORG-004. Organization settings must include operational configuration such as base currency (DEC-007), locale/timezone for business dates, and inventory-related defaults once those defaults are confirmed.
+ORG-004. Organization settings include a single base currency (DEC-007), locale/timezone for business dates, and other inventory-related defaults. The initial product does not support multi-currency accounting or multi-currency inventory valuation.
 
 ORG-005. Users operate inside an organization membership context. The organization in use is determined by the authenticated user’s membership, not by a value the user can freely assert to reach another tenant.
 
@@ -410,12 +412,13 @@ Responsibilities:
 
 - Manage platform-level administration and organization lifecycle support.
 - Assist with system-wide configuration that is not tenant operations.
-- Must not casually operate a tenant’s purchasing, sales, or stock as if they were an organization manager.
+- When operating in an organization context, access all warehouses across that organization (DEC-003). Broader tenant operational duty remains subject to DEC-012.
 
 Limits:
 
 - Not a substitute for an organization ADMIN.
-- Any exceptional access to tenant operational data, if ever permitted, is a controlled support act and must be audited (DEC-012).
+- Must not casually operate a tenant’s purchasing, sales, or stock as if they were an organization manager.
+- Any exceptional access to tenant operational data beyond confirmed warehouse-access rules, if ever permitted, is a controlled support act and must be audited (DEC-012).
 
 ### 14.2 ADMIN
 
@@ -425,8 +428,10 @@ Responsibilities:
 
 - Manage organization settings, users, roles, and master data administration.
 - Oversee warehouses, catalog, and high-impact operational controls.
-- Approve purchases and other organization-level approvals as configured.
-- Review audit history and AI action approvals.
+- Approve purchases and warehouse transfers, and review AI action approvals.
+- Access all warehouses within the organization (DEC-003).
+- View inventory cost information (DEC-023).
+- Review audit history.
 
 Limits:
 
@@ -440,14 +445,15 @@ ROLE-003. **MANAGER** is an operational and commercial manager.
 Responsibilities:
 
 - Oversee inventory health, purchasing, sales performance, and warehouse balance.
-- Approve purchase orders, transfers, adjustments, and AI high-impact actions as configured.
+- Approve purchase orders, warehouse transfers, adjustments, and AI high-impact actions.
+- Access all warehouses within the organization (DEC-003).
+- View inventory cost information (DEC-023).
 - Use reports, KPIs, and AI briefings to direct staff.
 
 Limits:
 
 - Does not replace platform SUPER_ADMIN.
-- May have broader warehouse access than staff (DEC-003).
-- Cost and valuation visibility is expected (DEC-023).
+- Still confined to their organization.
 
 ### 14.4 INVENTORY_STAFF
 
@@ -464,9 +470,9 @@ Limits:
 
 - No organization user administration.
 - No unrestricted access to other organizations.
-- May be limited to assigned warehouses (DEC-003).
-- Do not see cost by default (DEC-023).
-- Do not approve high-value purchasing unless later granted.
+- Access only assigned warehouses (DEC-003). Warehouse restrictions are enforced by the backend, including inventory, transactions, reports, and other warehouse-scoped information.
+- Cannot view inventory cost information by default (DEC-023).
+- Do not approve purchase orders.
 
 ### 14.5 SALES_STAFF
 
@@ -482,7 +488,8 @@ Limits:
 
 - Cannot freely adjust inventory to make a sale possible.
 - Cannot approve purchase orders.
-- May not see cost by default (DEC-023).
+- Access only assigned warehouses (DEC-003). Warehouse restrictions are enforced by the backend.
+- Cannot view inventory cost information by default (DEC-023). AI tools apply the same restriction.
 - Cannot access other organizations’ customers or stock.
 
 ### 14.6 VIEWER
@@ -491,14 +498,14 @@ ROLE-006. **VIEWER** is a read-only organizational role.
 
 Responsibilities:
 
-- View permitted operational information and reports.
-- Use AI copilot in read mode if permitted.
+- View permitted operational information and reports for assigned warehouses only (DEC-003).
+- Use AI copilot in read mode if permitted, with the same warehouse and cost restrictions.
 
 Limits:
 
 - Cannot create or change products, stock, orders, users, or approvals.
 - Cannot approve AI actions that would change operations.
-- Cost visibility defaults off (DEC-023).
+- Cannot view inventory cost information by default (DEC-023).
 
 ---
 
@@ -516,7 +523,7 @@ PROD-005. Draft products are not used on live purchase or sales documents.
 
 PROD-006. Active products may be purchased, received, sold, transferred, and reported.
 
-PROD-007. Inactive products are excluded from new operational documents but remain in history and any remaining stock (DEC-033).
+PROD-007. Inactive products cannot be added to new purchasing or sales transactions. They remain visible in historical transactions, inventory history, reports, and audit records. Historical data remains intact (DEC-033).
 
 PROD-008. Archived products are removed from ordinary operational search while remaining historically referenced.
 
@@ -528,9 +535,9 @@ PROD-011. Product images and/or documents may be attached to help identification
 
 PROD-012. Product lifecycle must support create, update, status change, and controlled retirement.
 
-PROD-013. The inventory identity in the initial product is the SKU (DEC-004). Variants are not assumed.
+PROD-013. The inventory identity in the initial product is the SKU. There is no product-variant matrix. Items that need separate inventory tracking are separate products/SKUs (for example T-Shirt Blue Medium, T-Shirt Blue Large, and T-Shirt Red Medium). A parent-product/variant system is future scope (DEC-004).
 
-PROD-014. Reorder level and low-stock threshold are user-maintained product/warehouse planning attributes (DEC-031).
+PROD-014. Reorder level and low-stock threshold are maintained by authorized users. AI may recommend changes but must not silently overwrite them (DEC-031).
 
 PROD-015. A product belongs to exactly one organization.
 
@@ -574,7 +581,7 @@ UOM-001. An organization can define units of measure used for stocking, purchasi
 
 UOM-002. Each product has a stocking unit that is the unit of inventory quantity.
 
-UOM-003. Complex multi-step conversion is not assumed. If conversion exists, it is a simple numeric factor between a purchase/sales unit and the stocking unit (DEC-005).
+UOM-003. The initial product supports simple unit conversion using explicit, deterministic conversion factors (for example 1 Box = 12 Pieces). It does not provide a complex universal unit-of-measure engine (DEC-005).
 
 UOM-004. Quantities on inventory records are expressed in the stocking unit.
 
@@ -594,15 +601,15 @@ WH-003. Warehouse status includes at least active and inactive. Inactive warehou
 
 WH-004. Inventory is warehouse-specific. The same SKU may have different quantities in different warehouses.
 
-WH-005. Users may be associated with warehouses when warehouse restrictions are enabled (DEC-003).
+WH-005. Warehouse-level access control is required (DEC-003). INVENTORY_STAFF, SALES_STAFF, and VIEWER are assigned to warehouses and may only use those warehouses. ADMIN and MANAGER access all warehouses in the organization. SUPER_ADMIN, when operating in an organization context, accesses all warehouses across that organization. These restrictions are enforced by the backend, not merely hidden in the frontend.
 
 WH-006. Transfers are the business method for moving stock between warehouses. Editing one warehouse’s quantity to “move” goods without a transfer is not acceptable.
 
 WH-007. Warehouses belong to one organization and are not shared across organizations.
 
-WH-008. Opening stock is established per product per warehouse.
+WH-008. Opening stock is established per product per warehouse by authorized entry or import (DEC-026).
 
-WH-009. Reporting and AI answers that mention location must respect warehouse permissions.
+WH-009. Reporting, transactions, notifications, and AI answers that mention location must respect warehouse permissions. Operational users must not see warehouse-scoped information for warehouses to which they are not assigned.
 
 WH-010. A default warehouse may be configured for operational convenience; it does not bypass availability or permissions.
 
@@ -614,49 +621,69 @@ Inventory is a core business capability and the system of record for stock quant
 
 ### 20.1 Meaning of stock quantities
 
-INV-001. **Stock on Hand** is the quantity recorded as held at a warehouse for a product (in the stocking unit).
+These definitions are confirmed (DEC-014) and are authoritative for this document.
 
-INV-002. **Reserved Stock** is quantity committed to confirmed demand (confirmed sales, and approved in-process transfers when applicable) and therefore not available for a new commitment (DEC-028).
+INV-001. **Physical Stock** is the total physical quantity recorded at a warehouse/product level, including sellable and non-sellable inventory (stocking unit).
 
-INV-003. **Available Stock** is the quantity that may still be promised.
+INV-002. **Reserved Stock** is sellable inventory committed for confirmed business transactions according to reservation rules (DEC-028). Reserved quantity is part of sellable quantity, not an extra physical quantity.
 
-**Available Stock = Stock on Hand − Reserved Stock**
+INV-003. **Sellable Stock** is physical inventory that is currently fit for normal sale (not damaged or expired).
 
-This is a business rule, not an implementation note.
+INV-004. **Available Stock** is sellable inventory that is not reserved. It is the quantity that may still be promised for normal sales.
 
-INV-004. Available stock must not be presented as a separate independently edited number. It is derived from on-hand and reserved.
+**Available Stock = Sellable Stock − Reserved Stock**
 
-INV-005. Stock on hand must not be edited as a raw field in ordinary use. It changes only through recognized stock events (Section 21).
+This is a business rule. Available Stock must not mean total physical inventory.
 
-INV-006. Negative stock on hand and negative available stock are not allowed (DEC-021).
+INV-005. Available stock must not be presented as a separately edited number. It is derived from sellable and reserved quantities.
+
+INV-006. Physical, sellable, reserved, damaged, and expired quantities change only through recognized stock events (Section 21). They are not silently overwritten.
+
+INV-007. Negative stock is not allowed. The system must prevent confirmation of transactions that would cause available or sellable stock to become negative (DEC-021).
+
+Conceptual model:
+
+```
+Physical Stock
+├── Sellable Stock
+│   ├── Available Stock
+│   └── Reserved Stock
+├── Damaged Stock
+└── Expired Stock
+```
+
+**Physical Stock = Sellable Stock + Damaged Stock + Expired Stock**  
+**Sellable Stock = Available Stock + Reserved Stock**
 
 ### 20.2 Inventory views and planning attributes
 
-INV-007. Users with permission can view inventory by product, by warehouse, and across warehouses they are allowed to see.
+INV-008. Users with permission can view inventory by product, by warehouse, and only across warehouses they are allowed to see (DEC-003).
 
-INV-008. Opening stock establishes the starting on-hand quantity with a traceable opening event (DEC-026).
+INV-009. Opening stock may be entered or imported by authorized users. Opening-stock operations must validate the product and warehouse, validate quantities, create inventory movements, preserve audit history, and respect organization and warehouse permissions. Opening stock must not bypass inventory integrity rules (DEC-026).
 
-INV-009. The organization can maintain low-stock thresholds and reorder levels per product, and by warehouse where planning differs by location (DEC-031).
+INV-010. Authorized users maintain low-stock thresholds and reorder levels per product, and by warehouse where planning differs by location. AI may recommend changes but must not silently overwrite them (DEC-031).
 
-INV-010. Low stock means on-hand or available quantity at or below the low-stock threshold, as the organization configures. The default interpretation is based on **available stock** so reserved demand is visible.
+INV-011. Low stock is interpreted against **available stock** so reserved demand remains visible. Damaged and expired stock do not count as available.
 
-INV-011. Stock aging is the time stock has been held, used to identify slow-moving goods.
+INV-012. Stock aging is the time stock has been held, used to identify slow-moving goods.
 
-INV-012. Dead stock is stock with no meaningful movement over an organization-defined period, or otherwise identified as not expected to sell.
+INV-013. Dead stock is stock with no meaningful movement over an organization-defined period, or otherwise identified as not expected to sell.
 
-INV-013. Inventory valuation is a management view of the value of stock using the chosen method (DEC-006). Valuation is a calculation, not an AI guess.
+INV-014. Inventory valuation is a management view using **Weighted Average Cost**. The system maintains sufficient inventory cost information to calculate weighted-average cost correctly. FIFO, LIFO, and other complex accounting valuation methods are out of initial scope (DEC-006). Valuation is a calculation, not an AI guess. Cost figures are visible only to roles allowed by DEC-023.
 
-INV-014. Damaged stock must be identifiable and must not remain available to sell as good stock.
+INV-015. **Damaged Stock** is physical inventory that is not currently sellable because it is damaged. It must be identifiable, must not be available for normal sales, and must be moved with a damage-related inventory movement.
 
-INV-015. Expired stock must be identifiable and must not remain available to sell as good stock. Lot/expiry tracking is optional and decided in DEC-018.
+INV-016. **Expired Stock** is physical inventory that is not currently sellable because it has expired. It must be identifiable, must not be available for normal sales, and must be moved with an expiry-related inventory movement.
 
-INV-016. Inventory history is the business-readable record of quantity changes and reasons.
+INV-017. Batch/lot tracking and expiry dates are supported in the initial product. Serial-number tracking is not. Batch and expiry information must be available where relevant to receiving, stock tracking, sales, returns, reporting, and AI analysis (DEC-018).
 
-INV-017. Physical count / adjustment processes exist so recorded stock can be aligned to counted stock through an adjustment event, not a silent overwrite.
+INV-018. Inventory history is the business-readable record of quantity changes and reasons, including transitions into or out of damaged or expired stock.
 
-INV-018. Inbound purchased quantity that is not yet received is not stock on hand and is not available stock.
+INV-019. Physical count / adjustment processes exist so recorded stock can be aligned to counted stock through an adjustment event, not a silent overwrite.
 
-INV-019. Staff must be able to explain, for any product/warehouse: on-hand, reserved, available, recent movements, and whether goods are inbound.
+INV-020. Inbound purchased quantity that is not yet received is not physical stock and is not available stock. Purchase orders do not reserve sellable inventory (DEC-028).
+
+INV-021. Staff must be able to explain, for any product/warehouse they are allowed to see: physical, sellable, reserved, available, damaged, and expired quantities; recent movements; batch/expiry where relevant; and whether goods are inbound.
 
 ---
 
@@ -672,17 +699,17 @@ Recognized movement types include:
 
 | ID | Movement | Business meaning |
 |----|----------|------------------|
-| INV-033 | Opening | Initial stock recorded at go-live or new warehouse/product introduction. |
-| INV-034 | Purchase | Stock increase from goods received against purchasing. |
-| INV-035 | Sale | Stock decrease from completed sale/fulfillment. |
-| INV-036 | Purchase return | Stock decrease when goods are returned to a supplier. |
-| INV-037 | Sales return | Stock increase when customer-returned goods are accepted into sellable or non-sellable stock as applicable. |
-| INV-038 | Adjustment in | Controlled increase to correct understated stock. |
+| INV-033 | Opening | Initial physical/sellable (or classified) stock recorded at go-live or new warehouse/product introduction. |
+| INV-034 | Purchase | Physical and sellable increase from goods received as good stock against purchasing. |
+| INV-035 | Sale | Physical and sellable decrease from completed sale/fulfillment of reserved sellable stock. |
+| INV-036 | Purchase return | Physical (and sellable or non-sellable, as applicable) decrease when a confirmed/dispatched supplier return is recorded. |
+| INV-037 | Sales return | Physical increase when customer-returned goods are received; sellable increase only after inspection accepts them as sellable. |
+| INV-038 | Adjustment in | Controlled increase to correct understated stock, classified as sellable or non-sellable as appropriate. |
 | INV-039 | Adjustment out | Controlled decrease to correct overstated stock. |
 | INV-040 | Transfer out | Decrease at source warehouse. |
 | INV-041 | Transfer in | Increase at destination warehouse. |
-| INV-042 | Damage | Quantity removed from sellable good stock due to damage. |
-| INV-043 | Expired | Quantity removed from sellable good stock due to expiry. |
+| INV-042 | Damage | Quantity moved from sellable to damaged (non-sellable) stock, or otherwise identified as damaged. |
+| INV-043 | Expired | Quantity moved from sellable to expired (non-sellable) stock, or otherwise identified as expired. |
 
 INV-044. Adjustments require a reason and an authorized actor.
 
@@ -690,13 +717,15 @@ INV-045. Transfers produce paired business history at source and destination; in
 
 INV-046. Inventory history is auditable and is not editable as ordinary data by business users.
 
+INV-047. Inventory movements must clearly identify transitions involving damaged or expired stock (DEC-014).
+
 ---
 
 ## 22. Supplier Management
 
 SUP-001. An organization can maintain supplier profiles (identity, status, contacts, addresses, notes).
 
-SUP-002. Supplier codes are unique within an organization (DEC-027).
+SUP-002. Supplier codes are unique within an organization. They are not globally unique across organizations. Cross-organization identifiers must never create data leakage or conflicts (DEC-027).
 
 SUP-003. Suppliers can be active or inactive. Inactive suppliers cannot be used on new purchase orders.
 
@@ -741,7 +770,7 @@ PUR-004. Additional states must not be treated as confirmed requirements unless 
 
 PUR-005. Draft purchase orders do not increase stock and do not commit the organization until submitted.
 
-PUR-006. Approval is required before a purchase order becomes Approved (DEC-009).
+PUR-006. Submitted purchase orders require approval before they proceed to the next operational stage. ADMIN and MANAGER can approve. The initial product does not use approval matrices or configurable monetary thresholds (DEC-009).
 
 PUR-007. Only authorized roles may approve. Approvers should not be able to silently approve beyond their authority.
 
@@ -759,7 +788,7 @@ PUR-013. Purchase returns are a distinct process (Section 27), not a silent nega
 
 PUR-014. AI may draft a purchase order; it does not become Approved without the normal approval path (AI-assisted actions).
 
-PUR-015. Commercial totals on a purchase order are calculations from lines (and optional recorded tax amounts per DEC-008), not AI estimates.
+PUR-015. Commercial totals on a purchase order are calculations from lines and optional recorded tax rate/amount fields (DEC-008), not AI estimates. There is no jurisdictional tax engine.
 
 ---
 
@@ -775,15 +804,15 @@ REC-004. Quantity verification is a business step: received quantity may differ 
 
 REC-005. Short receipts leave remaining quantity open or are explained.
 
-REC-006. Damaged goods at receipt must be identifiable and must not be put into available sellable stock as if they were good.
+REC-006. Damaged goods at receipt must be identifiable as damaged stock and must not be put into sellable or available stock as if they were good.
 
-REC-007. Accepted good quantity updates stock on hand at the receiving warehouse through a purchase movement.
+REC-007. Accepted good quantity updates physical and sellable stock at the receiving warehouse through a purchase movement. Batch/lot and expiry information is recorded where relevant (DEC-018).
 
 REC-008. Receiving is not complete until the business records the receipt. Printing or intending to receive does not change stock.
 
 REC-009. Receiving history is retained and auditable.
 
-REC-010. Users limited to a warehouse may only receive into warehouses they are allowed to use (DEC-003).
+REC-010. INVENTORY_STAFF may only receive into assigned warehouses. ADMIN and MANAGER may receive into any warehouse in the organization (DEC-003).
 
 REC-011. Over-receiving beyond ordered quantity is not assumed to be freely allowed. If permitted, it is an exception requiring authorization (ASM-007).
 
@@ -793,7 +822,7 @@ REC-011. Over-receiving beyond ordered quantity is not assumed to be freely allo
 
 CUS-001. An organization can maintain customer profiles needed for sales and returns.
 
-CUS-002. Customer codes are unique within an organization (DEC-027).
+CUS-002. Customer codes are unique within an organization. They are not globally unique across organizations. Cross-organization identifiers must never create data leakage or conflicts (DEC-027).
 
 CUS-003. Contact information and status (active/inactive) are maintained.
 
@@ -826,21 +855,21 @@ High-level states for the initial product:
 | Completed | Goods issued/fulfilled; stock deducted for fulfilled quantity. |
 | Cancelled | Will not be fulfilled; reservations released. |
 
-SAL-003. Partial fulfillment may be allowed (DEC-015). If allowed, remaining reserved quantity stays committed until completed or cancelled. A distinct “partially fulfilled” label may be shown as a view of Completed/Confirmed progress; it is not an extra confirmed core state unless later added.
+SAL-003. Partial fulfillment may be allowed (DEC-015 remains open). If allowed, remaining reserved quantity stays committed until completed or cancelled. A distinct “partially fulfilled” label may be shown as a view of Completed/Confirmed progress; it is not an extra confirmed core state unless later added.
 
-SAL-004. Draft sales do not reserve stock.
+SAL-004. Draft sales do not reserve stock (DEC-028).
 
-SAL-005. Confirmation requires available stock at the fulfillment warehouse under DEC-021 and DEC-022 (no backorders in the initial recommended policy).
+SAL-005. Confirmation requires sufficient **available stock** at the fulfillment warehouse. Negative available or sellable stock is not allowed (DEC-021). Backorders are not supported; if sufficient available stock does not exist, the sale cannot be confirmed (DEC-022).
 
-SAL-006. Confirmation reserves stock, increasing Reserved Stock and decreasing Available Stock without yet decreasing Stock on Hand.
+SAL-006. Confirmation reserves sellable stock, increasing Reserved Stock and decreasing Available Stock without changing Physical Stock or Sellable Stock.
 
-SAL-007. Completion/fulfillment deducts Stock on Hand and releases the corresponding reservation, with a sale movement.
+SAL-007. Completion/fulfillment deducts Physical Stock and Sellable Stock, releases the corresponding reservation, and records a sale movement. Batch/lot and expiry information is used where relevant (DEC-018).
 
-SAL-008. Cancellation of a confirmed order releases reservation without a sale movement. Cancellation authority is restricted (DEC-019).
+SAL-008. Normal sales do not require manual approval. Cancellation of a confirmed order releases reservation without a sale movement. Cancellations, exceptional overrides, and other high-impact operational exceptions require MANAGER or ADMIN authorization. There is no complex configurable sales approval workflow in the initial product (DEC-019).
 
-SAL-009. Sales staff must see availability before confirming.
+SAL-009. Sales staff must see availability for assigned warehouses before confirming.
 
-SAL-010. If two users compete for the last available quantity, only one confirmation succeeds; the other is told stock is no longer available (DEC-034).
+SAL-010. When multiple users attempt to consume the same available inventory concurrently, availability must be revalidated before confirmation. Only transactions with sufficient available stock succeed. Competing transactions fail gracefully when stock is no longer available. Race-condition overselling is not allowed (DEC-034).
 
 SAL-011. Sales history is retained.
 
@@ -848,7 +877,7 @@ SAL-012. Commercial invoices may be produced as operational records of a sale (D
 
 SAL-013. Selling prices on documents are controlled business data. Users cannot arbitrarily overwrite protected pricing if the organization later locks prices; initially, authorized users may set line prices with audit of significant changes (ASM-008).
 
-SAL-014. Sales do not bypass warehouse permissions.
+SAL-014. Sales do not bypass warehouse permissions. SALES_STAFF may only sell from assigned warehouses (DEC-003).
 
 SAL-015. AI may draft a sale-related action only if later in scope; high-impact sales changes still follow permissions. Initial AI write drafts focus on purchasing, adjustments, and transfers (Section 39).
 
@@ -862,9 +891,9 @@ RET-002. Every return has a reason, quantities, source document when applicable,
 
 RET-003. Draft returns do not change stock.
 
-RET-004. Customer-returned goods increase sellable stock only after they are accepted as sellable (DEC-030). Unsellable returns follow damage handling.
+RET-004. Customer returns do not automatically become sellable stock. Returned goods must go through inspection. After inspection, acceptable goods may return to sellable inventory; damaged goods remain non-sellable; expired goods remain non-sellable where applicable. All resulting inventory changes are recorded and auditable (DEC-030).
 
-RET-005. Supplier returns decrease stock when the return is confirmed/dispatched (DEC-029).
+RET-005. Purchase-return stock impact occurs when the return is confirmed/dispatched according to the workflow. Draft purchase returns do not change inventory. All stock changes create traceable inventory movements (DEC-029).
 
 RET-006. Return quantities cannot exceed the original eligible sold or received quantities in a way that creates unexplained stock. Over-returning is not allowed without an authorized exception (ASM-009).
 
@@ -893,25 +922,27 @@ High-level states:
 | State | Meaning |
 |-------|---------|
 | Draft | Prepared; no stock effect. |
-| Pending approval | Submitted for authorization when approval is required (DEC-020). |
-| Approved | Authorized to dispatch. |
+| Pending approval | Submitted; waiting for MANAGER or ADMIN approval (DEC-020). |
+| Approved | Authorized; may reserve source sellable stock where required by the transfer workflow (DEC-028). |
 | Dispatched | Left the source; in transit. |
 | Received | Accepted at destination. |
 | Cancelled | Will not occur; no remaining stock effect. |
 
-TRF-004. Dispatch decreases source stock on hand via Transfer out. If reservation was used after approval, reservation is consumed consistently (DEC-028).
+TRF-004. Warehouse transfers require approval by an authorized MANAGER or ADMIN before final confirmation (DEC-020). Transfers must respect warehouse permissions and inventory availability rules. Negative available or sellable stock is not allowed.
 
-TRF-005. While dispatched and not yet received, quantity is in transit: it is not available at either warehouse as ordinary on-hand sellable stock.
+TRF-005. Dispatch decreases source physical and sellable stock via Transfer out. If reservation was used after approval, reservation is consumed consistently (DEC-028).
 
-TRF-006. Receipt increases destination stock on hand via Transfer in.
+TRF-006. While dispatched and not yet received, quantity is in transit: it is not available at either warehouse as ordinary sellable stock.
 
-TRF-007. Partial dispatch or partial receipt is an assumption if needed (ASM-010). If not enabled, transfers are dispatched and received in full.
+TRF-007. Receipt increases destination physical and sellable stock via Transfer in. Batch/lot and expiry information travels with the goods where relevant (DEC-018).
 
-TRF-008. Transfer history is retained.
+TRF-008. Partial dispatch or partial receipt is an assumption if needed (ASM-010). If not enabled, transfers are dispatched and received in full.
 
-TRF-009. Users may only transfer from/to warehouses they are permitted to use.
+TRF-009. Transfer history is retained.
 
-TRF-010. AI may draft transfers; dispatch still requires normal controls and approval.
+TRF-010. Users may only transfer from/to warehouses they are permitted to use (DEC-003).
+
+TRF-011. AI may draft transfers; confirmation still requires human approval and normal controls (DEC-010, DEC-035).
 
 ---
 
@@ -919,7 +950,7 @@ TRF-010. AI may draft transfers; dispatch still requires normal controls and app
 
 Reports are operational management views of existing business data. They do not invent transactions.
 
-RPT-001. Inventory reports: on-hand, reserved, available, by product and warehouse.
+RPT-001. Inventory reports: physical, sellable, reserved, available, damaged, and expired quantities, by product and warehouse, including batch/expiry where relevant.
 
 RPT-002. Stock movement reports: movements by type, product, warehouse, and time.
 
@@ -933,7 +964,7 @@ RPT-006. Warehouse reports: stock position, inbound/outbound, transfers.
 
 RPT-007. Product performance: sales and movement of products over time.
 
-RPT-008. Inventory valuation reports using the confirmed method.
+RPT-008. Inventory valuation reports using Weighted Average Cost (DEC-006), visible only to roles permitted to see cost (DEC-023).
 
 RPT-009. Low-stock reports using thresholds.
 
@@ -943,7 +974,7 @@ RPT-011. Dead-stock analysis.
 
 RPT-012. Stockout analysis: products/periods where demand could not be filled or available stock reached zero.
 
-RPT-013. Reports support filtering (organization context is implicit; warehouse, product, supplier, customer, status, date range as applicable).
+RPT-013. Reports support filtering (organization context is implicit; warehouse, product, supplier, customer, status, date range as applicable). Warehouse-restricted roles see only assigned warehouses (DEC-003).
 
 RPT-014. Reports support time-based analysis (periods, date ranges).
 
@@ -959,7 +990,7 @@ NOT-001. Users receive notifications for events that require attention.
 
 NOT-002. Low-stock alerts when a product/warehouse crosses its low-stock threshold.
 
-NOT-003. Out-of-stock alerts when available or on-hand stock reaches zero for tracked active products.
+NOT-003. Out-of-stock alerts when available stock reaches zero for tracked active products. Damaged and expired stock must not be treated as available.
 
 NOT-004. Purchase order events: submitted, approved, rejected, received, cancelled, as relevant to the user.
 
@@ -1013,7 +1044,7 @@ AI-002. Users may ask natural-language operational questions, including:
 
 AI-003. The copilot may only use information the user is authorized to see in the application.
 
-AI-004. The copilot must respect organization isolation, roles, warehouse restrictions, and cost-visibility rules.
+AI-004. The copilot must respect organization isolation, roles, warehouse restrictions, and cost-visibility rules. AI tools apply the same permission rules as the application (DEC-003, DEC-023).
 
 AI-005. The copilot must not invent products, quantities, orders, suppliers, prices, movements, or financial values.
 
@@ -1051,9 +1082,9 @@ AI-017. Recommendations must be explainable using supporting information such as
 
 AI-018. Suggested quantities that are numeric operational suggestions should be grounded in application calculations where possible. AI interprets and explains; it does not become the only source of arithmetic.
 
-AI-019. Recommendations do not change reorder levels unless a person accepts a change through normal controls (DEC-031).
+AI-019. AI must not silently overwrite user-maintained reorder points. Recommended reorder-point changes are drafts and follow the approval workflow (DEC-031, DEC-010).
 
-AI-020. Accepting a reorder recommendation creates a draft purchase path, not an approved PO (DEC-035).
+AI-020. Accepting a reorder recommendation does not execute a purchase. The system creates a draft action; normal validation, authorization, and required approval follow (DEC-035).
 
 ---
 
@@ -1126,17 +1157,21 @@ AI-040. Drafts remain visible as AI-originated in history.
 
 ## 40. Human Approval for AI Actions
 
-AI-041. High-impact actions require appropriate human approval. Examples: creating or submitting purchase orders; inventory adjustments; stock transfers; other financially or operationally significant changes (DEC-010).
+AI-041. Any AI-generated action that can materially change business data or operational state requires explicit human approval. Examples include creating or modifying purchase orders, changing reorder settings, creating inventory adjustments, confirming transfers, and other material write operations (DEC-010). AI may analyze data and generate recommendations automatically, but must not silently execute high-impact writes.
 
-AI-042. Required business sequence:
+AI-042. Required business sequence (DEC-035):
 
-1. Analyze available authorized information.
-2. Produce a recommendation or draft.
-3. Explain the reasoning.
-4. Present the proposed action.
-5. Wait for appropriate authorization when required.
-6. Execute only through normal application controls.
-7. Record the action and approval in audit history.
+1. AI analyzes authorized data.
+2. AI produces a recommendation.
+3. The user reviews the recommendation.
+4. The user accepts or edits.
+5. The system creates a draft action.
+6. Normal application validation and authorization run.
+7. Required approval is obtained.
+8. The action executes through normal application controls.
+9. The audit log records the recommendation, draft, approval, and execution.
+
+AI recommendations remain distinguishable from confirmed business actions.
 
 AI-043. Approval is given by an authorized human using their own credentials. The AI cannot approve itself.
 
@@ -1168,7 +1203,7 @@ AI-051. **Traceability.** AI outputs and subsequent approvals are auditable.
 
 AI-052. **Confidence.** Uncertain outputs are labelled; low-confidence advice is not presented as sure.
 
-AI-053. **Data freshness.** Users are not led to believe stale advice is current (DEC-024).
+AI-053. **Data freshness.** AI responses and recommendations must communicate data freshness where relevant. AI must not present stale, cached, delayed, or historical data as real-time data. When analysis depends on non-current information, the relevant timestamp or freshness must be identified (DEC-024).
 
 AI-054. **Permission awareness.** AI cannot be used to read or do what the user could not do in the application.
 
@@ -1263,7 +1298,7 @@ KPI definitions are business meanings. Formulas may be refined later, but they m
 | KPI-007 | Supplier performance | Composite view of timeliness, completeness, and discrepancy/return history where data exists. |
 | KPI-008 | Purchase cycle time | Time from purchase draft/submit to approval and/or to completed receipt. |
 | KPI-009 | Sales performance | Sales quantities and commercial amounts over a period, by product, customer, or warehouse as authorized. |
-| KPI-010 | Warehouse utilization | Business view of how stock is distributed and how heavily a warehouse is used relative to other locations. Precise space-capacity utilization is not assumed without capacity data. |
+| KPI-010 | Warehouse Inventory Distribution | Business view of how inventory is distributed across warehouses, including relative stock position and inbound/outbound movement. Physical space-capacity utilization is not measured unless warehouse capacity data is explicitly introduced. |
 | KPI-011 | Average inventory value | Typical value of on-hand inventory over a period using the chosen valuation method. |
 | KPI-012 | Stock aging | Distribution of stock by age bands. |
 | KPI-013 | AI recommendation acceptance rate | Share of AI recommendations that authorized users accept versus reject or ignore, used to judge usefulness—not to auto-execute. |
@@ -1573,7 +1608,7 @@ Assumptions are not confirmed requirements. They exist so later phases do not tr
 | RSK-009 | Incorrect demand predictions | Treated as facts; bad purchases. | Medium | Label predictions; keep human approval; do not auto-buy. |
 | RSK-010 | Stale AI drafts executed | Adjustments or POs that no longer match stock. | Medium | Revalidation before execution; show freshness. |
 | RSK-011 | Scope creep into accounting | Delayed inventory quality; confused users. | Medium | Hard out-of-scope list; limited payments. |
-| RSK-012 | Unclear damaged/expired meaning | Available stock misstated. | Medium | Confirm DEC-014 and DEC-018 before treating extra buckets as fact. |
+| RSK-012 | Incorrect damaged/expired classification | Available stock misstated if damaged or expired quantities are incorrectly treated as sellable. | Medium | Enforce the confirmed DEC-014 terminology and DEC-018 batch/expiry rules consistently across receiving, sales, returns, transfers, reporting, and AI. |
 | RSK-013 | Shared logins | Audit becomes meaningless. | Medium | Named users; discourage sharing in administration practice. |
 | RSK-014 | Over-privileged ADMIN | Internal abuse. | Medium | Audit; separate duties for day-to-day staff; SUPER_ADMIN ≠ tenant operator. |
 | RSK-015 | Notification fatigue | Alerts ignored, including real stockouts. | Medium | Meaningful thresholds; role-targeted notices. |
@@ -1626,53 +1661,26 @@ The following are **not** initial requirements. They may be considered after the
 
 ## 52. Open Business Decisions
 
-Unresolved decisions are listed in full in [REQUIREMENT-DECISIONS.md](./REQUIREMENT-DECISIONS.md). They are summarized here so the BRD does not pretend they are closed.
+Unresolved decisions are listed in full in [REQUIREMENT-DECISIONS.md](./REQUIREMENT-DECISIONS.md). Only decisions that are still marked **Open** are listed here; confirmed decisions are authoritative and are not repeated in this section.
 
 | Decision ID | Topic |
-|-------------|--------|
+|-------------|-------|
 | DEC-001 | Commercial pricing model of the product |
 | DEC-002 | Organization scale targets |
-| DEC-003 | Warehouse permission model |
-| DEC-004 | Product variants |
-| DEC-005 | Unit conversion complexity |
-| DEC-006 | Inventory valuation method |
-| DEC-007 | Currency |
-| DEC-008 | Tax handling |
-| DEC-009 | Purchase approval thresholds |
-| DEC-010 | AI action approval thresholds |
 | DEC-011 | Data retention |
 | DEC-012 | SUPER_ADMIN access to tenant operational data |
 | DEC-013 | Multi-organization users |
-| DEC-014 | Damaged and expired stock versus stock on hand |
 | DEC-015 | Partial sales fulfillment |
 | DEC-016 | Invoicing depth |
 | DEC-017 | Payment recording depth |
-| DEC-018 | Lot, batch, and serial tracking |
-| DEC-019 | Sales approval |
-| DEC-020 | Transfer approval |
-| DEC-021 | Negative stock policy |
-| DEC-022 | Backorders |
-| DEC-023 | Cost visibility by role |
-| DEC-024 | AI data freshness |
-| DEC-025 | Localization |
-| DEC-026 | Opening stock source |
-| DEC-027 | Customer and supplier uniqueness |
-| DEC-028 | Reserved stock sources |
-| DEC-029 | Purchase return inventory timing |
-| DEC-030 | Customer return restock |
-| DEC-031 | Reorder point ownership |
-| DEC-032 | Organization self-registration |
-| DEC-033 | Inactive product behavior |
-| DEC-034 | Concurrent competing sales |
-| DEC-035 | AI recommendation acceptance process |
 
-Do not treat recommended defaults as approved until a decision owner confirms them.
+Do not treat recommended defaults for these unresolved decisions as approved until a decision owner confirms them.
 
 ---
 
 ## Requirement quality notes
 
-- Inventory meaning is consistent: **Available Stock = Stock on Hand − Reserved Stock**.
+- Inventory meaning is consistent: **Available Stock = Sellable Stock − Reserved Stock**; Physical Stock includes sellable and non-sellable inventory.
 - Multi-tenancy applies to all operational domains, reports, notifications, AI, and audit.
 - Roles are least-privilege; VIEWER cannot change stock; AI cannot outrank roles.
 - High-impact AI actions require human approval and revalidation, then normal controls.
